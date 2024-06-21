@@ -1,0 +1,52 @@
+image: maven:3.8.1-jdk-11
+
+stages:
+  - analyze
+  - build
+  - test
+  - deploy
+
+cache:
+  paths:
+    - .m2/repository
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+static_analysis:
+  stage: analyze
+  script:
+    - mvn checkstyle:check
+
+build_jar:
+  stage: build
+  script:
+    - mvn package
+  artifacts:
+    paths:
+      - target/*.jar
+
+test:
+  stage: test
+  script:
+    - mvn test
+
+deploy_staging:
+  stage: deploy
+  script:
+    - mvn deploy -Denv=staging
+  only:
+    - develop
+
+deploy_production:
+  stage: deploy
+  script:
+    - mvn deploy -Denv=production
+  only:
+    - tags
+
+build_docker:
+  stage: build
+  script:
+    - docker build -t mu-image:$CI_COMMIT_SHA .
+    - docker push my-registry/my-image:$CI_COMMIT_SHA
